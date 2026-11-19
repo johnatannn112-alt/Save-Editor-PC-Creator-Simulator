@@ -1,0 +1,33 @@
+name: Ekstrak File ZIP Otomatis
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Cari dan Ekstrak File ZIP
+        run: |
+          for f in *.zip; do
+            if [ -e "$f" ]; then
+              echo "Mengekstrak: $f"
+              # Mengekstrak langsung ke root repository (./)
+              unzip -o "$f" -d ./
+              # Menghapus file zip setelah diekstrak
+              rm "$f"
+            fi
+          done
+
+      - name: Simpan Perubahan ke Repository
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Otomatis ekstrak file ZIP langsung ke root repository"
+          branch: main
