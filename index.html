@@ -1,5 +1,10 @@
 <title>Editor Save v3</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a6c74">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
 <style>
 /* Layout: satu kolom sempit seperti formulir teknis; ringkasan file di atas, grup nilai berbentuk baris label/nilai, bilah aksi menempel di bawah. */
@@ -69,6 +74,10 @@ details.all[open]>summary::after{content:"–"}
 </style>
 
 <div class="wrap">
+  <div class="notice" id="installBox" hidden style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+    <span>Pasang sebagai aplikasi supaya bisa dibuka tanpa internet.</span>
+    <button class="btn primary" id="install" type="button">Pasang</button>
+  </div>
   <header>
     <h1>Editor Save v3</h1>
     <p class="sub">Buka file <span class="mono">v3.dat</span> dari game, ubah nilainya, lalu simpan. File diproses di perangkatmu dan tidak dikirim ke mana pun.</p>
@@ -264,4 +273,11 @@ function save(){
   $("toast").textContent="Diunduh sebagai v3.dat. Salin ke folder save game setelah game ditutup."}
 $("saveDat").addEventListener("click",save);
 })();
+
+/* ---------- PWA ---------- */
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+var deferred=null,$=function(id){return document.getElementById(id)};
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferred=e;$("installBox").hidden=false});
+$("install").addEventListener("click",function(){if(!deferred)return;deferred.prompt();deferred.userChoice.finally(function(){deferred=null;$("installBox").hidden=true})});
+window.addEventListener("appinstalled",function(){$("installBox").hidden=true});
 </script>

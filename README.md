@@ -2,10 +2,17 @@
 
 Editor save untuk game simulasi mining PC (Unity IL2CPP). File `v3.dat` memakai .NET BinaryFormatter tanpa enkripsi, jadi nilainya bisa diedit langsung.
 
-## Versi web (`index.html`)
-Buka `index.html` di browser (atau lewat GitHub Pages), pilih `v3.dat`, ubah nilainya, lalu simpan. Semua diproses di perangkatmu.
+## Versi web (PWA)
+Aplikasi web yang bisa dipasang di HP dan jalan tanpa internet. Pilih `v3.dat`, ubah nilainya, lalu tekan **Unduh v3.dat**. Semua diproses di perangkatmu.
 
-Tombol "Unduh v3.dat" mengunduh file hasil edit langsung dengan nama v3.dat.
+### Cara memasang
+PWA hanya bisa dipasang kalau dibuka lewat HTTPS, bukan dari file lokal. Cara paling mudah memakai GitHub Pages:
+1. Upload semua isi folder ini ke repo GitHub (`index.html` harus di root repo).
+2. Buka **Settings > Pages**, pilih branch `main` dan folder `/ (root)`, lalu Save.
+3. Tunggu satu sampai dua menit, lalu buka `https://<username>.github.io/<nama-repo>/` di Chrome HP.
+4. Tekan tombol **Pasang** di halaman, atau menu Chrome (tiga titik) > **Instal aplikasi** / **Tambahkan ke layar utama**.
+
+Setelah terpasang, aplikasi bisa dibuka dari layar utama dan jalan offline. Kalau kamu mengubah file di repo, naikkan `CACHE` di `sw.js` (misalnya `save-editor-v2`) supaya HP mengambil versi baru.
 
 ## Versi Python
 ```
