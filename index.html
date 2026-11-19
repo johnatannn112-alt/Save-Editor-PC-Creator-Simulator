@@ -52,6 +52,10 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
 .row label{display:flex;flex-direction:column;min-width:0}
 .row .name{font-weight:500;overflow-wrap:anywhere}
 .row .hint{font:12px var(--font-mono);color:var(--muted)}
+.sel{width:100%;min-height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px var(--font-mono)}
+.sel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.xpnote{padding:10px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.xpnote.warn{color:var(--warn);background:var(--warn-soft)}
 .row.changed .name::after{content:" • diubah";color:var(--accent);font-weight:600;font-size:12px}
 input[type=text],input[type=search]{width:100%;min-height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px var(--font-mono);text-align:right}
 input[type=search]{text-align:left;font-family:var(--font-body)}
@@ -182,6 +186,7 @@ R.parse=function(){
 
 /* ---------- state ---------- */
 var $=function(id){return document.getElementById(id)};
+var XP=[0,1000,2000,3200,4800,6400,9000,12400,16100,20000,30000],MAXLV=10,hooks=[];
 var orig=null,work=null,fields=[],player=null,fname="v3.dat";
 var LABEL={Money:"Uang",Bitcoin:"Bitcoin",Ethereum:"Ethereum",EthereumClassic:"Ethereum Classic",ZCash:"Zcash",Ravencoin:"Ravencoin",Monero:"Monero",Dogecoin:"Dogecoin",
   Level:"Level",Experience:"Pengalaman (EXP)",Rating:"Rating",Year:"Tahun game",YearProgress:"Progres tahun",StartYear:"Tahun mulai",
@@ -189,7 +194,7 @@ var LABEL={Money:"Uang",Bitcoin:"Bitcoin",Ethereum:"Ethereum",EthereumClassic:"E
   OrdersLimit:"Batas order",ComputersLimit:"Batas komputer",ComputersWarehouseLimit:"Batas gudang komputer",
   GameSpeed:"Kecepatan game",TimeModifier:"Pengali waktu",TimeOrderModifier:"Pengali waktu order"};
 var GROUPS=[["Uang dan koin",["Money","Bitcoin","Ethereum","EthereumClassic","ZCash","Ravencoin","Monero","Dogecoin"]],
-  ["Progres",["Level","Experience","Rating","Year","YearProgress"]],
+  ["Progres",["Rating","Year","YearProgress"]],
   ["Bank",["BankDeposit","BankLoan","BankLoanTimer","BankLoanTerm","BankCrisis"]],
   ["Batas",["OrdersLimit","ComputersLimit","ComputersWarehouseLimit"]]];
 var INTR={i8:[-128,127],u8:[0,255],i16:[-32768,32767],u16:[0,65535],i32:[-2147483648,2147483647],u32:[0,4294967295]};
@@ -203,6 +208,7 @@ function setVal(f,text){var v=new DataView(work.buffer),o=f.off,t=text.trim().re
   if(f.kind==="f32"||f.kind==="f64"){if(t===""||!isFinite(Number(t)))return false;var x=Number(t);if(f.kind==="f32"){if(Math.abs(x)>3.4028234e38)return false;v.setFloat32(o,x,true)}else v.setFloat64(o,x,true);return true}
   if(f.kind==="i64"||f.kind==="u64"){if(!/^-?\d+$/.test(t))return false;try{var b=BigInt(t);if(f.kind==="i64")v.setBigInt64(o,b,true);else v.setBigUint64(o,b,true);return true}catch(e){return false}}
   if(!/^-?\d+$/.test(t))return false;var n=Number(t),r=INTR[f.kind];if(!r||n<r[0]||n>r[1])return false;
+  if(f.name==="Level"&&(n<1||n>MAXLV))return false;if(f.name==="Experience"&&n<0)return false;
   switch(f.kind){case"u8":work[o]=n;break;case"i8":v.setInt8(o,n);break;case"i16":v.setInt16(o,n,true);break;case"u16":v.setUint16(o,n,true);break;case"i32":v.setInt32(o,n,true);break;case"u32":v.setUint32(o,n,true);break}
   return true}
 function isEditable(f){return f.kind!=="ro64"}
@@ -223,13 +229,46 @@ function mkRow(f){
     inp.addEventListener("blur",function(){if(!inp.classList.contains("bad"))inp.value=fmt(f,getVal(f))})}
   f.inputs=f.inputs||[];f.inputs.push({row:row,inp:inp});row.append(inp);return row}
 
-function refresh(){
+function syncInputs(){fields.forEach(function(f){(f.inputs||[]).forEach(function(x){if(document.activeElement===x.inp)return;
+  if(x.inp.type==="checkbox")x.inp.checked=getVal(f);else if(!x.inp.classList.contains("bad"))x.inp.value=fmt(f,getVal(f))})})}
+function refresh(){syncInputs();hooks.forEach(function(h){h()});
   var ch=changedFields(),names=ch.map(function(f){return f.name});
   fields.forEach(function(f){var on=names.indexOf(f.name)>=0&&ch.indexOf(f)>=0;(f.inputs||[]).forEach(function(x){x.row.classList.toggle("changed",on)})});
   var bad=document.querySelector("input.bad");
   $("count").textContent=bad?"Ada nilai yang tidak valid, perbaiki dulu.":ch.length?ch.length+" field diubah":"Belum ada perubahan";
   $("saveDat").disabled=!!bad||!ch.length;$("reset").disabled=!ch.length;
   $("toast").textContent=""}
+
+function levelSection(by){
+  var L=by.Level,E=by.Experience;if(!L||!E)return null;
+  var sec=document.createElement("section"),h=document.createElement("h2"),box=document.createElement("div");
+  h.textContent="Level pemain";box.className="panel group";
+  var row=document.createElement("div");row.className="row";
+  var lab=document.createElement("label");lab.htmlFor="lvlSel";
+  var nm=document.createElement("span");nm.className="name";nm.textContent="Level";
+  var hint=document.createElement("span");hint.className="hint";hint.textContent="Level · pilih 1 sampai "+MAXLV;lab.append(nm,hint);
+  var sel=document.createElement("select");sel.id="lvlSel";sel.className="sel";
+  var cur=getVal(L);
+  if(cur<1||cur>MAXLV){var o=document.createElement("option");o.value=String(cur);o.textContent=cur+" (di luar batas)";sel.append(o)}
+  for(var i=1;i<=MAXLV;i++){var op=document.createElement("option");op.value=String(i);op.textContent=String(i);sel.append(op)}
+  sel.value=String(cur);
+  row.append(lab,sel);box.append(row);
+  box.append(mkRow(E));
+  var arow=document.createElement("div");arow.className="row";
+  var alab=document.createElement("label");alab.htmlFor="autoReset";
+  var an=document.createElement("span");an.className="name";an.textContent="Atur XP ke 0 saat level diganti";
+  alab.append(an);var ac=document.createElement("input");ac.type="checkbox";ac.id="autoReset";ac.checked=true;arow.append(alab,ac);box.append(arow);
+  var note=document.createElement("div");note.className="xpnote";box.append(note);
+  sel.addEventListener("change",function(){var v=Number(sel.value);if(v<1||v>MAXLV)return;
+    new DataView(work.buffer).setInt32(L.off,v,true);
+    if(ac.checked)new DataView(work.buffer).setInt32(E.off,0,true);refresh()});
+  hooks.push(function(){
+    var lv=getVal(L),ok=lv>=1&&lv<=MAXLV;
+    if(ok&&sel.value!==String(lv))sel.value=String(lv);
+    if(!ok){note.textContent="Level di luar batas 1 sampai "+MAXLV+". Pilih level yang valid supaya progres terbaca.";note.classList.add("warn");return}
+    note.classList.remove("warn");var t=XP[lv],xp=getVal(E);
+    note.textContent="Target XP di level "+lv+": "+t.toLocaleString("id-ID")+(lv===MAXLV?" (level maksimum). ":". ")+"Isi XP antara 0 dan "+(t-1).toLocaleString("id-ID")+"."+(xp>=t?" XP sekarang melewati target, jadi level baru naik saat kamu mendapat XP berikutnya.":"")});
+  sec.append(h,box);return sec}
 
 function load(buf,name){
   var r;try{r=new Reader(buf).parse()}catch(e){showErr("File ini tidak bisa dibaca sebagai save game. "+e.message);return}
@@ -249,7 +288,7 @@ function load(buf,name){
   if(typeof player.SaveName==="string")add("Nama save",player.SaveName||"(kosong)");
   if(typeof player.Gamemode==="string")add("Mode",player.Gamemode);
   if(by.Year)add("Tahun",String(getVal(by.Year)));if(by.Level)add("Level",String(getVal(by.Level)));if(by.Money)add("Uang",String(getVal(by.Money)));
-  var g=$("groups");g.textContent="";
+  var g=$("groups");g.textContent="";hooks.length=0;var ls=levelSection(by);if(ls)g.append(ls);
   GROUPS.forEach(function(gr){var list=gr[1].filter(function(n){return by[n]});if(!list.length)return;
     var sec=document.createElement("section"),h=document.createElement("h2"),box=document.createElement("div");h.textContent=gr[0];box.className="panel group";
     list.forEach(function(n){box.append(mkRow(by[n]))});sec.append(h,box);g.append(sec)});

@@ -26,6 +26,13 @@ def main(argv):
     if not sets:
         for k, (off, f, v) in fields.items(): print(f'{k:28} {v!r}')
         return 0
+    XP = [0, 1000, 2000, 3200, 4800, 6400, 9000, 12400, 16100, 20000, 30000]
+    if 'Level' in sets and not 1 <= int(sets['Level']) <= 10:
+        print('! Level harus 1 sampai 10 (di luar itu progres tidak terbaca di game)'); return 2
+    if 'Level' in sets and 'Experience' not in sets:
+        sets['Experience'] = '0'; print('i Experience diatur ke 0 karena Level diubah')
+    if 'Experience' in sets and int(sets['Experience']) < 0:
+        print('! Experience tidak boleh negatif'); return 2
     buf = bytearray(data)
     for k, val in sets.items():
         if k not in fields: print(f'! field not found: {k}'); return 2

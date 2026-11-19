@@ -12,6 +12,8 @@ PWA hanya bisa dipasang kalau dibuka lewat HTTPS, bukan dari file lokal. Cara pa
 3. Tunggu satu sampai dua menit, lalu buka `https://<username>.github.io/<nama-repo>/` di Chrome HP.
 4. Tekan tombol **Pasang** di halaman, atau menu Chrome (tiga titik) > **Instal aplikasi** / **Tambahkan ke layar utama**.
 
+Level pemain berkisar 1 sampai 10. Target XP per level: 1000, 2000, 3200, 4800, 6400, 9000, 12400, 16100, 20000, 30000 (level 1 sampai 10).
+
 Setelah terpasang, aplikasi bisa dibuka dari layar utama dan jalan offline. Kalau kamu mengubah file di repo, naikkan `CACHE` di `sw.js` (misalnya `save-editor-v2`) supaya HP mengambil versi baru.
 
 ## Versi Python

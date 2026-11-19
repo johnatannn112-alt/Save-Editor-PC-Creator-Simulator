@@ -1,5 +1,5 @@
 // Service worker: simpan halaman dan ikon di cache supaya editor bisa dibuka tanpa internet.
-const CACHE = "save-editor-v1";
+const CACHE = "save-editor-v2";
 const ASSETS = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-192.png", "icons/maskable-512.png"];
 
 self.addEventListener("install", (e) => {
