@@ -1,0 +1,267 @@
+<title>Editor Save v3</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: satu kolom sempit seperti formulir teknis; ringkasan file di atas, grup nilai berbentuk baris label/nilai, bilah aksi menempel di bawah. */
+:root{
+  --bg:#eef0f2; --surface:#ffffff; --ink:#1a1d23; --muted:#5b6471; --line:#d8dce2;
+  --accent:#0a6c74; --accent-ink:#ffffff; --accent-soft:#dff0f1; --warn:#a24c05; --warn-soft:#fbeedd; --good:#17753a;
+  --font-display:"Space Grotesk",system-ui,sans-serif; --font-body:"Inter",system-ui,sans-serif; --font-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151a; --surface:#192028; --ink:#e7ebef; --muted:#97a1ad; --line:#29313b;
+  --accent:#58c4cb; --accent-ink:#06282b; --accent-soft:#16363a; --warn:#f0a553; --warn-soft:#33260f; --good:#5fd08a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151a; --surface:#192028; --ink:#e7ebef; --muted:#97a1ad; --line:#29313b;
+  --accent:#58c4cb; --accent-ink:#06282b; --accent-soft:#16363a; --warn:#f0a553; --warn-soft:#33260f; --good:#5fd08a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 120px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font:700 26px/1.15 var(--font-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font:600 13px/1.2 var(--font-display);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 8px}
+p{margin:0}
+.sub{color:var(--muted);margin-top:6px;max-width:60ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pick{padding:16px;display:flex;flex-direction:column;gap:12px}
+.pick label.btn{align-self:flex-start}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:8px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 14px var(--font-body);cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.notice{padding:12px 14px;border-radius:8px;background:var(--warn-soft);color:var(--warn);font-size:14px}
+.notice b{font-weight:600}
+.err{background:var(--warn-soft);color:var(--warn);padding:12px 14px;border-radius:8px;font-size:14px}
+.steps{margin:0;padding-left:20px;color:var(--muted);display:flex;flex-direction:column;gap:4px;font-size:14px}
+.steps code,.mono{font-family:var(--font-mono);font-size:13px}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.summary div{padding:10px 12px;min-width:0;box-shadow:inset -1px -1px 0 var(--line)}
+.summary dt{font-size:12px;color:var(--muted)}
+.summary dd{margin:2px 0 0;font:500 14px var(--font-mono);overflow-wrap:anywhere}
+.group{padding:4px 0}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,150px);gap:12px;align-items:center;padding:8px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row label{display:flex;flex-direction:column;min-width:0}
+.row .name{font-weight:500;overflow-wrap:anywhere}
+.row .hint{font:12px var(--font-mono);color:var(--muted)}
+.row.changed .name::after{content:" • diubah";color:var(--accent);font-weight:600;font-size:12px}
+input[type=text],input[type=search]{width:100%;min-height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px var(--font-mono);text-align:right}
+input[type=search]{text-align:left;font-family:var(--font-body)}
+input.bad{border-color:var(--warn);background:var(--warn-soft)}
+.row input[type=checkbox]{width:26px;height:26px;justify-self:end;accent-color:var(--accent)}
+details.all{padding:0}
+details.all>summary{cursor:pointer;padding:14px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+details.all>summary::after{content:"+";font:500 18px var(--font-mono);color:var(--muted)}
+details.all[open]>summary::after{content:"–"}
+.find{padding:0 14px 10px}
+.scroll{max-height:60vh;overflow:auto;border-top:1px solid var(--line)}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.bar .in{max-width:640px;margin:0 auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .count{flex:1 1 100%;font-size:13px;color:var(--muted)}
+.bar .btn{flex:1 1 auto}
+.toast{font-size:13px;color:var(--good);flex:1 1 100%;min-height:1.2em}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){.btn{transition:filter .12s}.btn:hover:not(:disabled){filter:brightness(.96)}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Editor Save v3</h1>
+    <p class="sub">Buka file <span class="mono">v3.dat</span> dari game, ubah nilainya, lalu simpan. File diproses di perangkatmu dan tidak dikirim ke mana pun.</p>
+  </header>
+
+  <section class="panel pick" id="pick">
+    <label class="btn primary" for="file">Pilih file v3.dat</label>
+    <input id="file" type="file">
+    <div id="err" class="err" hidden></div>
+    <ol class="steps" id="steps">
+      <li>Salin <code>v3.dat</code> ke tempat aman sebagai cadangan.</li>
+      <li>Pilih file itu di sini, ubah nilainya, lalu simpan.</li>
+      <li>Tutup game sepenuhnya, timpa <code>v3.dat</code> lama dengan hasilnya, lalu buka game.</li>
+    </ol>
+  </section>
+
+  <div id="editor" hidden>
+    <div class="notice"><b>Tutup game dulu</b> sebelum menimpa save. Game bisa menulis ulang file itu saat masih berjalan.</div>
+    <dl class="summary" id="summary" style="margin-top:20px"></dl>
+    <div id="groups" style="display:flex;flex-direction:column;gap:20px;margin-top:20px"></div>
+    <details class="panel all" style="margin-top:20px">
+      <summary><span>Semua field <span class="mono" id="allcount" style="color:var(--muted)"></span></span></summary>
+      <div class="find"><input id="q" type="search" placeholder="Cari nama field"></div>
+      <div class="scroll" id="all"></div>
+    </details>
+  </div>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <div class="in">
+    <div class="count" id="count">Belum ada perubahan</div>
+    <button class="btn primary" id="saveDat" disabled>Unduh v3.dat</button>
+    <button class="btn" id="reset" disabled>Batalkan</button>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- parser MS-NRBF (.NET BinaryFormatter) ---------- */
+var KINDS={1:{n:"bool",s:1},2:{n:"u8",s:1},6:{n:"f64",s:8},7:{n:"i16",s:2},8:{n:"i32",s:4},9:{n:"i64",s:8},
+  10:{n:"i8",s:1},11:{n:"f32",s:4},12:{n:"ro64",s:8},13:{n:"ro64",s:8},14:{n:"u16",s:2},15:{n:"u32",s:4},16:{n:"u64",s:8}};
+function Reader(buf){this.b=new Uint8Array(buf);this.v=new DataView(buf);this.p=0;this.classes=new Map();this.fields=[];this.objs=new Map();this.dec=new TextDecoder("utf-8")}
+var R=Reader.prototype;
+R.u8=function(){return this.b[this.p++]};
+R.i32=function(){var x=this.v.getInt32(this.p,true);this.p+=4;return x};
+R.lps=function(){var n=0,sh=0,c;do{c=this.u8();n|=(c&127)<<sh;sh+=7}while(c&128);var s=this.dec.decode(this.b.subarray(this.p,this.p+n));this.p+=n;return s};
+R.prim=function(t,path){
+  if(t===18||t===5)return this.lps();
+  if(t===3){var c=this.b[this.p],n=c<128?1:c<224?2:c<240?3:4;var s=this.dec.decode(this.b.subarray(this.p,this.p+n));this.p+=n;return s}
+  var k=KINDS[t];if(!k)throw new Error("tipe primitif "+t+" tidak dikenal");
+  var off=this.p;this.p+=k.s;this.fields.push({path:path,off:off,kind:k.n});return null};
+R.classinfo=function(){var oid=this.i32(),name=this.lps(),n=this.i32(),m=[];for(var i=0;i<n;i++)m.push(this.lps());return{oid:oid,name:name,members:m}};
+R.types=function(n){var bt=[],ex=[],i,t;for(i=0;i<n;i++)bt.push(this.u8());
+  for(i=0;i<n;i++){t=bt[i];if(t===0||t===7)ex.push(this.u8());else if(t===3)ex.push(this.lps());else if(t===4){ex.push([this.lps(),this.i32()])}else ex.push(null)}
+  return{bt:bt,ex:ex}};
+R.members=function(oid,name,m,bt,ex){
+  var owner=name+"#"+oid,vals={};
+  for(var i=0;i<m.length;i++){vals[m[i]]=bt[i]===0?this.prim(ex[i],owner+"."+m[i]):this.record(owner+"."+m[i])}
+  this.objs.set(oid,{name:name,vals:vals});return{ref:oid}};
+R.skipNulls=function(arr,i){var rt=this.b[this.p];
+  if(rt===13){this.p++;var k=this.u8();for(var j=0;j<k;j++)arr.push(null);return i+k}
+  if(rt===14){this.p++;var k2=this.i32();for(var j2=0;j2<k2;j2++)arr.push(null);return i+k2}return -1};
+R.record=function(path){
+  var rt=this.u8(),info,t,oid,n,arr,i,nx;
+  switch(rt){
+  case 0:this.p+=16;return null;
+  case 11:return "END";
+  case 12:this.i32();this.lps();return this.record(path);
+  case 4:case 5:
+    info=this.classinfo();t=this.types(info.members.length);if(rt===5)this.i32();
+    this.classes.set(info.oid,{name:info.name,m:info.members,bt:t.bt,ex:t.ex});
+    return this.members(info.oid,info.name,info.members,t.bt,t.ex);
+  case 2:case 3:throw new Error("format class tanpa tipe tidak didukung");
+  case 1:oid=this.i32();var ref=this.i32(),c=this.classes.get(ref);this.classes.set(oid,c);return this.members(oid,c.name,c.m,c.bt,c.ex);
+  case 6:oid=this.i32();var s=this.lps();this.objs.set(oid,{name:"str",vals:s});return s;
+  case 8:t=this.u8();return this.prim(t,path);
+  case 9:return{ref:this.i32()};
+  case 10:return null;
+  case 13:this.u8();return null;
+  case 14:this.i32();return null;
+  case 15:oid=this.i32();n=this.i32();t=this.u8();for(i=0;i<n;i++)this.prim(t,path+"["+i+"]");return{ref:oid};
+  case 16:case 17:oid=this.i32();n=this.i32();arr=[];i=0;
+    while(i<n){nx=this.skipNulls(arr,i);if(nx>=0){i=nx;continue}arr.push(this.record(path+"["+i+"]"));i++}
+    return{ref:oid};
+  case 7:{oid=this.i32();var at=this.u8(),rank=this.i32(),lens=[],tot=1;
+    for(i=0;i<rank;i++){lens.push(this.i32());tot*=lens[i]}
+    if(at>=3&&at<=5)for(i=0;i<rank;i++)this.i32();
+    var bt=this.u8(),ex=null;
+    if(bt===0||bt===7)ex=this.u8();else if(bt===3)ex=this.lps();else if(bt===4){ex=[this.lps(),this.i32()]}
+    arr=[];i=0;
+    while(i<tot){if(bt===0){this.prim(ex,path+"["+i+"]");i++;continue}
+      nx=this.skipNulls(arr,i);if(nx>=0){i=nx;continue}arr.push(this.record(path+"["+i+"]"));i++}
+    return{ref:oid}}
+  default:throw new Error("record "+rt+" tidak dikenal di byte "+(this.p-1));
+  }};
+R.parse=function(){
+  if(this.u8()!==0)throw new Error("Bukan file BinaryFormatter (byte pertama harus 00).");
+  this.p+=16;var r;do{r=this.record("root")}while(r!=="END");
+  return this};
+
+/* ---------- state ---------- */
+var $=function(id){return document.getElementById(id)};
+var orig=null,work=null,fields=[],player=null,fname="v3.dat";
+var LABEL={Money:"Uang",Bitcoin:"Bitcoin",Ethereum:"Ethereum",EthereumClassic:"Ethereum Classic",ZCash:"Zcash",Ravencoin:"Ravencoin",Monero:"Monero",Dogecoin:"Dogecoin",
+  Level:"Level",Experience:"Pengalaman (EXP)",Rating:"Rating",Year:"Tahun game",YearProgress:"Progres tahun",StartYear:"Tahun mulai",
+  BankDeposit:"Deposito bank",BankLoan:"Pinjaman bank",BankLoanTimer:"Timer pinjaman",BankLoanTerm:"Tenor pinjaman",BankCrisis:"Krisis bank",
+  OrdersLimit:"Batas order",ComputersLimit:"Batas komputer",ComputersWarehouseLimit:"Batas gudang komputer",
+  GameSpeed:"Kecepatan game",TimeModifier:"Pengali waktu",TimeOrderModifier:"Pengali waktu order"};
+var GROUPS=[["Uang dan koin",["Money","Bitcoin","Ethereum","EthereumClassic","ZCash","Ravencoin","Monero","Dogecoin"]],
+  ["Progres",["Level","Experience","Rating","Year","YearProgress"]],
+  ["Bank",["BankDeposit","BankLoan","BankLoanTimer","BankLoanTerm","BankCrisis"]],
+  ["Batas",["OrdersLimit","ComputersLimit","ComputersWarehouseLimit"]]];
+var INTR={i8:[-128,127],u8:[0,255],i16:[-32768,32767],u16:[0,65535],i32:[-2147483648,2147483647],u32:[0,4294967295]};
+
+function getVal(f){var v=new DataView(work.buffer),o=f.off;
+  switch(f.kind){case"bool":return work[o]!==0;case"u8":return work[o];case"i8":return v.getInt8(o);case"i16":return v.getInt16(o,true);case"u16":return v.getUint16(o,true);
+  case"i32":return v.getInt32(o,true);case"u32":return v.getUint32(o,true);case"i64":return v.getBigInt64(o,true);case"u64":return v.getBigUint64(o,true);
+  case"f32":return v.getFloat32(o,true);case"f64":return v.getFloat64(o,true);default:return v.getBigInt64(o,true)}}
+function fmt(f,val){if(f.kind==="f32")return String(parseFloat(val.toPrecision(7)));if(f.kind==="f64")return String(parseFloat(val.toPrecision(15)));return String(val)}
+function setVal(f,text){var v=new DataView(work.buffer),o=f.off,t=text.trim().replace(",",".");
+  if(f.kind==="f32"||f.kind==="f64"){if(t===""||!isFinite(Number(t)))return false;var x=Number(t);if(f.kind==="f32"){if(Math.abs(x)>3.4028234e38)return false;v.setFloat32(o,x,true)}else v.setFloat64(o,x,true);return true}
+  if(f.kind==="i64"||f.kind==="u64"){if(!/^-?\d+$/.test(t))return false;try{var b=BigInt(t);if(f.kind==="i64")v.setBigInt64(o,b,true);else v.setBigUint64(o,b,true);return true}catch(e){return false}}
+  if(!/^-?\d+$/.test(t))return false;var n=Number(t),r=INTR[f.kind];if(!r||n<r[0]||n>r[1])return false;
+  switch(f.kind){case"u8":work[o]=n;break;case"i8":v.setInt8(o,n);break;case"i16":v.setInt16(o,n,true);break;case"u16":v.setUint16(o,n,true);break;case"i32":v.setInt32(o,n,true);break;case"u32":v.setUint32(o,n,true);break}
+  return true}
+function isEditable(f){return f.kind!=="ro64"}
+function changedFields(){return fields.filter(function(f){for(var i=0;i<f.size;i++)if(work[f.off+i]!==orig[f.off+i])return true;return false})}
+
+function mkRow(f){
+  var row=document.createElement("div");row.className="row";row.dataset.name=f.name.toLowerCase();
+  var lab=document.createElement("label");var id="f_"+f.name+"_"+f.off;lab.htmlFor=id;
+  var nm=document.createElement("span");nm.className="name";nm.textContent=LABEL[f.name]||f.name;
+  var hint=document.createElement("span");hint.className="hint";hint.textContent=f.name+" · "+f.kind;
+  lab.append(nm,hint);row.append(lab);
+  var inp=document.createElement("input");inp.id=id;
+  if(f.kind==="bool"){inp.type="checkbox";inp.checked=getVal(f);
+    inp.addEventListener("change",function(){work[f.off]=inp.checked?1:0;refresh()})}
+  else{inp.type="text";inp.inputMode=(f.kind==="f32"||f.kind==="f64")?"decimal":"numeric";inp.autocomplete="off";inp.spellcheck=false;
+    inp.value=fmt(f,getVal(f));if(!isEditable(f))inp.disabled=true;
+    inp.addEventListener("input",function(){var ok=setVal(f,inp.value);inp.classList.toggle("bad",!ok);refresh()});
+    inp.addEventListener("blur",function(){if(!inp.classList.contains("bad"))inp.value=fmt(f,getVal(f))})}
+  f.inputs=f.inputs||[];f.inputs.push({row:row,inp:inp});row.append(inp);return row}
+
+function refresh(){
+  var ch=changedFields(),names=ch.map(function(f){return f.name});
+  fields.forEach(function(f){var on=names.indexOf(f.name)>=0&&ch.indexOf(f)>=0;(f.inputs||[]).forEach(function(x){x.row.classList.toggle("changed",on)})});
+  var bad=document.querySelector("input.bad");
+  $("count").textContent=bad?"Ada nilai yang tidak valid, perbaiki dulu.":ch.length?ch.length+" field diubah":"Belum ada perubahan";
+  $("saveDat").disabled=!!bad||!ch.length;$("reset").disabled=!ch.length;
+  $("toast").textContent=""}
+
+function load(buf,name){
+  var r;try{r=new Reader(buf).parse()}catch(e){showErr("File ini tidak bisa dibaca sebagai save game. "+e.message);return}
+  var pid=null;r.objs.forEach(function(o,id){if(o.name==="Player"&&pid===null)pid=id});
+  if(pid===null){showErr("Tidak menemukan data Player. Pastikan ini file v3.dat dari game.");return}
+  $("err").hidden=true;fname=name||"v3.dat";
+  orig=new Uint8Array(buf.slice(0));work=new Uint8Array(buf.slice(0));
+  var pref="Player#"+pid+".";
+  fields=r.fields.filter(function(f){return f.path.indexOf(pref)===0}).map(function(f){
+    var sz={bool:1,u8:1,i8:1,i16:2,u16:2,i32:4,u32:4,f32:4,i64:8,u64:8,f64:8,ro64:8}[f.kind];
+    return{name:f.path.slice(pref.length),off:f.off,kind:f.kind,size:sz}});
+  player=r.objs.get(pid).vals;
+  var by={};fields.forEach(function(f){by[f.name]=f});
+  var sum=$("summary");sum.textContent="";
+  function add(k,v){var d=document.createElement("div"),dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;d.append(dt,dd);sum.append(d)}
+  add("File",fname);add("Ukuran",(buf.byteLength/1024).toFixed(1)+" KB");
+  if(typeof player.SaveName==="string")add("Nama save",player.SaveName||"(kosong)");
+  if(typeof player.Gamemode==="string")add("Mode",player.Gamemode);
+  if(by.Year)add("Tahun",String(getVal(by.Year)));if(by.Level)add("Level",String(getVal(by.Level)));if(by.Money)add("Uang",String(getVal(by.Money)));
+  var g=$("groups");g.textContent="";
+  GROUPS.forEach(function(gr){var list=gr[1].filter(function(n){return by[n]});if(!list.length)return;
+    var sec=document.createElement("section"),h=document.createElement("h2"),box=document.createElement("div");h.textContent=gr[0];box.className="panel group";
+    list.forEach(function(n){box.append(mkRow(by[n]))});sec.append(h,box);g.append(sec)});
+  var all=$("all");all.textContent="";fields.forEach(function(f){all.append(mkRow(f))});$("allcount").textContent="("+fields.length+")";
+  $("q").value="";
+  $("editor").hidden=false;$("bar").hidden=false;$("steps").hidden=true;refresh()}
+
+function showErr(m){var e=$("err");e.textContent=m;e.hidden=false}
+
+$("file").addEventListener("change",function(ev){var f=ev.target.files&&ev.target.files[0];if(!f)return;
+  f.arrayBuffer().then(function(b){load(b,f.name)},function(){showErr("File tidak bisa dibuka. Coba pilih lagi.")})});
+$("q").addEventListener("input",function(){var q=$("q").value.trim().toLowerCase();
+  Array.prototype.forEach.call($("all").children,function(r){r.hidden=q&&r.dataset.name.indexOf(q)<0&&(r.querySelector(".name").textContent.toLowerCase().indexOf(q)<0)})});
+$("reset").addEventListener("click",function(){work.set(orig);fields.forEach(function(f){(f.inputs||[]).forEach(function(x){
+  if(x.inp.type==="checkbox")x.inp.checked=getVal(f);else{x.inp.value=fmt(f,getVal(f));x.inp.classList.remove("bad")}})});refresh()});
+
+function save(){
+  var url=URL.createObjectURL(new Blob([work],{type:"application/octet-stream"}));
+  var a=document.createElement("a");a.href=url;a.download="v3.dat";document.body.appendChild(a);a.click();a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url)},10000);
+  $("toast").textContent="Diunduh sebagai v3.dat. Salin ke folder save game setelah game ditutup."}
+$("saveDat").addEventListener("click",save);
+})();
+</script>
